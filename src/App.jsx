@@ -134,11 +134,30 @@ export default function App() {
     }
   };
 
-  // 数据预处理
+   // 1. 数据预处理：给图表用的数据 (保持不变)
   const dailyData = records.filter(r => r.record_type === 'daily' || r.glucose_fasting || r.systolic_bp);
-  const lastRecord = records[records.length - 1] || {};
-  const lastBp = lastRecord.systolic_bp ? `${lastRecord.systolic_bp}/${lastRecord.diastolic_bp}` : '--';
-  const isBpHigh = lastRecord.systolic_bp > STANDARDS.systolic_bp || lastRecord.diastolic_bp > STANDARDS.diastolic_bp;
+
+  // 2. 智能查找最新数据 (核心修复)
+  // 定义一个函数：倒序查找，找到最近一条包含该字段的记录
+  const findLastRecordWith = (field) => {
+    // [...records] 是为了不改变原数组，reverse() 是倒序
+    return [...records].reverse().find(r => r[field] != null && r[field] !== '') || {};
+  };
+
+  // 分别查找各项指标的“最新一次记录”
+  const lastGlucoseRecord = findLastRecordWith('glucose_fasting');
+  const lastBpRecord = findLastRecordWith('systolic_bp');
+  const lastHba1cRecord = findLastRecordWith('hba1c');
+  const lastTriRecord = findLastRecordWith('triglycerides');
+
+  // 3. 格式化显示数据
+  // 血压显示
+  const lastBpString = lastBpRecord.systolic_bp 
+    ? `${lastBpRecord.systolic_bp}/${lastBpRecord.diastolic_bp}` 
+    : '--';
+  
+  // 血压状态判断
+  const isBpHigh = lastBpRecord.systolic_bp > STANDARDS.systolic_bp || lastBpRecord.diastolic_bp > STANDARDS.diastolic_bp;
 
   if (!session) {
     return (
@@ -202,10 +221,35 @@ export default function App() {
         {view === 'dashboard' && (
           <div className="space-y-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-              <StatCard title="空腹血糖" value={lastRecord.glucose_fasting} unit="mmol/L" limit={STANDARDS.glucose_fasting} icon={<Droplet size={20} className="text-blue-500"/>} />
-              <StatCard title="最新血压" value={lastBp} unit="mmHg" customStatus={isBpHigh ? 'warning' : 'good'} limitStr={`<${STANDARDS.systolic_bp}/${STANDARDS.diastolic_bp}`} icon={<Heart size={20} className="text-rose-500"/>} />
-              <StatCard title="HbA1c" value={lastRecord.hba1c} unit="%" limit={STANDARDS.hba1c} icon={<Activity size={20} className="text-purple-500"/>} />
-              <StatCard title="甘油三酯" value={lastRecord.triglycerides} unit="mmol/L" limit={STANDARDS.triglycerides} icon={<Scale size={20} className="text-orange-500"/>} />
+              <StatCard 
+                title="空腹血糖" 
+                value={lastGlucoseRecord.glucose_fasting} // 改了这里
+                unit="mmol/L" 
+                limit={STANDARDS.glucose_fasting}
+                icon={<Droplet size={20} className="text-blue-500"/>} 
+              />
+              <StatCard 
+                title="最新血压" 
+                value={lastBpString} // 改了这里
+                unit="mmHg" 
+                customStatus={isBpHigh ? 'warning' : 'good'}
+                limitStr={`<${STANDARDS.systolic_bp}/${STANDARDS.diastolic_bp}`}
+                icon={<Heart size={20} className="text-rose-500"/>} 
+              />
+              <StatCard 
+                title="HbA1c" 
+                value={lastHba1cRecord.hba1c} // 改了这里
+                unit="%" 
+                limit={STANDARDS.hba1c}
+                icon={<Activity size={20} className="text-purple-500"/>} 
+              />
+              <StatCard 
+                title="甘油三酯" 
+                value={lastTriRecord.triglycerides} // 改了这里
+                unit="mmol/L" 
+                limit={STANDARDS.triglycerides}
+                icon={<Scale size={20} className="text-orange-500"/>} 
+              />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
