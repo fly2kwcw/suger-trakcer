@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { Activity, LayoutDashboard, FileText, LogOut, Droplet, Heart, Scale, Mail, Lock, ChevronLeft, ChevronRight, ArrowLeft, Layers } from 'lucide-react';
+import { Activity, LayoutDashboard, FileText, LogOut, Droplet, Heart, Scale, Mail, Lock, ChevronLeft, ChevronRight, ArrowLeft, Layers, HeartPulse } from 'lucide-react';
 
 // === 定义健康标准常量 ===
 const STANDARDS = {
-  glucose_fasting: 7.0,
-  glucose_after_meal: 10.0,
-  systolic_bp: 130,
-  diastolic_bp: 80,
-  hba1c: 7.0,
-  triglycerides: 1.7,
-  ldl_c: 2.6,
-  // 体重没有绝对标准，暂不划红线
+  glucose_fasting: 7.0,    // 空腹血糖上限
+  glucose_after_meal: 10.0,// 餐后血糖上限
+  systolic_bp: 130,        // 收缩压上限
+  diastolic_bp: 80,        // 舒张压上限
+  hba1c: 7.0,              // 糖化血红蛋白上限
+  triglycerides: 1.7,      // 甘油三酯上限
+  ldl_c: 2.6,              // LDL-C 上限
+  // 体重没有绝对标准
 };
 
 export default function App() {
@@ -98,7 +98,8 @@ export default function App() {
   const lastBpRecord = findLastRecordWith('systolic_bp');
   const lastHba1cRecord = findLastRecordWith('hba1c');
   const lastTriRecord = findLastRecordWith('triglycerides');
-  const lastWeightRecord = findLastRecordWith('weight'); // 新增：体重
+  const lastLdlRecord = findLastRecordWith('ldl_c'); // 新增：LDL
+  const lastWeightRecord = findLastRecordWith('weight');
 
   const lastBpString = lastBpRecord.systolic_bp ? `${lastBpRecord.systolic_bp}/${lastBpRecord.diastolic_bp}` : '--';
   const isBpHigh = lastBpRecord.systolic_bp > STANDARDS.systolic_bp || lastBpRecord.diastolic_bp > STANDARDS.diastolic_bp;
@@ -139,14 +140,15 @@ export default function App() {
       <main className="max-w-6xl mx-auto px-4 py-6">
         {view === 'dashboard' && (
           <div className="space-y-6">
-            {/* 顶部指标卡片 (5列布局) */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            {/* 顶部指标卡片 (改为 grid-cols-2 md:grid-cols-3，共6个卡片，正好两行) */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
               <StatCard title="空腹血糖" value={lastGlucoseRecord.glucose_fasting} unit="mmol/L" limit={STANDARDS.glucose_fasting} icon={<Droplet size={20} className="text-blue-500"/>} onClick={() => openDetail('glucose')} clickable />
               <StatCard title="最新血压" value={lastBpString} unit="mmHg" customStatus={isBpHigh ? 'warning' : 'good'} limitStr={`<${STANDARDS.systolic_bp}/${STANDARDS.diastolic_bp}`} icon={<Heart size={20} className="text-rose-500"/>} onClick={() => openDetail('bp')} clickable />
               <StatCard title="HbA1c" value={lastHba1cRecord.hba1c} unit="%" limit={STANDARDS.hba1c} icon={<Activity size={20} className="text-purple-500"/>} onClick={() => openDetail('hba1c')} clickable />
-              {/* 改用 Layers 图标表示血脂/甘油三酯 */}
               <StatCard title="甘油三酯" value={lastTriRecord.triglycerides} unit="mmol/L" limit={STANDARDS.triglycerides} icon={<Layers size={20} className="text-orange-500"/>} onClick={() => openDetail('triglycerides')} clickable />
-              {/* 新增：体重卡片 */}
+              {/* 新增：LDL-C 卡片 */}
+              <StatCard title="低密度脂蛋白" value={lastLdlRecord.ldl_c} unit="mmol/L" limit={STANDARDS.ldl_c} icon={<HeartPulse size={20} className="text-amber-500"/>} onClick={() => openDetail('ldl')} clickable />
+              {/* 体重卡片 */}
               <StatCard title="最新体重" value={lastWeightRecord.weight} unit="kg" icon={<Scale size={20} className="text-emerald-500"/>} onClick={() => openDetail('weight')} clickable />
             </div>
 
@@ -155,22 +157,41 @@ export default function App() {
                 <h3 className="font-bold text-gray-700 mb-4">血糖趋势</h3>
                 <div className="h-60"><ResponsiveContainer width="100%" height="100%"><LineChart data={dailyData.slice(-20)}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="record_date" tick={{fontSize:11}}/><YAxis domain={[0,'auto']} tick={{fontSize:11}}/><Tooltip/><Legend/><ReferenceLine y={STANDARDS.glucose_fasting} stroke="red" strokeDasharray="3 3"/><Line type="monotone" dataKey="glucose_fasting" stroke="#3b82f6" dot={{r:3}} name="空腹"/><Line type="monotone" dataKey="glucose_after_meal" stroke="#10b981" dot={{r:3}} name="餐后"/></LineChart></ResponsiveContainer></div>
               </div>
+              
+              {/* 血压图表：更新了双标准线 */}
               <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
                 <h3 className="font-bold text-gray-700 mb-4">血压趋势</h3>
-                <div className="h-60"><ResponsiveContainer width="100%" height="100%"><LineChart data={dailyData.slice(-20).filter(d=>d.systolic_bp)}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="record_date" tick={{fontSize:11}}/><YAxis domain={['dataMin - 10','dataMax + 10']} tick={{fontSize:11}}/><Tooltip/><Legend/><ReferenceLine y={STANDARDS.systolic_bp} stroke="red" strokeDasharray="3 3"/><Line type="monotone" dataKey="systolic_bp" stroke="#f43f5e" name="高压"/><Line type="monotone" dataKey="diastolic_bp" stroke="#6366f1" name="低压"/></LineChart></ResponsiveContainer></div>
+                <div className="h-60">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={dailyData.slice(-20).filter(d=>d.systolic_bp)}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false}/>
+                      <XAxis dataKey="record_date" tick={{fontSize:11}}/>
+                      <YAxis domain={['dataMin - 10','dataMax + 10']} tick={{fontSize:11}}/>
+                      <Tooltip/>
+                      <Legend/>
+                      {/* 高压标准线 (红) */}
+                      <ReferenceLine y={STANDARDS.systolic_bp} stroke="#ef4444" strokeDasharray="3 3" label={{position:'right', value:'130', fill:'#ef4444', fontSize:10}}/>
+                      {/* 低压标准线 (蓝) */}
+                      <ReferenceLine y={STANDARDS.diastolic_bp} stroke="#6366f1" strokeDasharray="3 3" label={{position:'right', value:'80', fill:'#6366f1', fontSize:10}}/>
+                      
+                      <Line type="monotone" dataKey="systolic_bp" stroke="#f43f5e" name="高压" dot={{r:3}}/>
+                      <Line type="monotone" dataKey="diastolic_bp" stroke="#6366f1" name="低压" dot={{r:3}}/>
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
 
              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="bg-gray-50 px-6 py-3 border-b border-gray-100 font-bold text-gray-700 flex justify-between"><span>📝 历史记录</span><span className="text-xs text-gray-400 font-normal">共 {reversedRecords.length} 条</span></div>
-                <div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead className="bg-white text-gray-500 border-b"><tr><th className="px-6 py-3">日期</th><th className="px-6 py-3">血糖</th><th className="px-6 py-3">血压</th><th className="px-6 py-3">HbA1c</th><th className="px-6 py-3">体重</th></tr></thead><tbody className="divide-y divide-gray-50">
+                <div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead className="bg-white text-gray-500 border-b"><tr><th className="px-6 py-3">日期</th><th className="px-6 py-3">血糖</th><th className="px-6 py-3">血压</th><th className="px-6 py-3">HbA1c</th><th className="px-6 py-3">LDL-C</th></tr></thead><tbody className="divide-y divide-gray-50">
                   {currentTableData.map(r => (
                     <tr key={r.id}>
                       <td className="px-6 py-3 text-gray-900">{r.record_date}</td>
                       <td className={`px-6 py-3 font-medium ${r.glucose_fasting > STANDARDS.glucose_fasting ? 'text-red-500' : ''}`}>{r.glucose_fasting || '-'}</td>
                       <td className={`px-6 py-3 ${r.systolic_bp > STANDARDS.systolic_bp ? 'text-red-500' : ''}`}>{r.systolic_bp ? `${r.systolic_bp}/${r.diastolic_bp}` : '-'}</td>
                       <td className={`px-6 py-3 ${r.hba1c > STANDARDS.hba1c ? 'text-red-500' : ''}`}>{r.hba1c || '-'}</td>
-                      <td className="px-6 py-3">{r.weight || '-'}</td>
+                      <td className={`px-6 py-3 ${r.ldl_c > STANDARDS.ldl_c ? 'text-red-500' : ''}`}>{r.ldl_c || '-'}</td>
                     </tr>
                   ))}
                   {currentTableData.length === 0 && <tr><td colSpan="5" className="text-center py-6 text-gray-400">暂无数据</td></tr>}
@@ -209,7 +230,8 @@ function DetailView({ metric, records, onBack }) {
     bp: { title: '血压历史', key1: 'systolic_bp', name1: '高压', key2: 'diastolic_bp', name2: '低压', color: '#f43f5e', limit: STANDARDS.systolic_bp },
     hba1c: { title: '糖化 HbA1c 历史', key1: 'hba1c', name1: 'HbA1c', color: '#8b5cf6', limit: STANDARDS.hba1c },
     triglycerides: { title: '甘油三酯历史', key1: 'triglycerides', name1: '甘油三酯', color: '#f97316', limit: STANDARDS.triglycerides },
-    // 新增：体重配置
+    // 新增：LDL配置
+    ldl: { title: '低密度脂蛋白 (LDL-C)', key1: 'ldl_c', name1: 'LDL-C', color: '#f59e0b', limit: STANDARDS.ldl_c },
     weight: { title: '体重变化趋势', key1: 'weight', name1: '体重 (kg)', color: '#10b981' },
   }[metric];
 
