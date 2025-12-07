@@ -2,21 +2,24 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>my-sugar-tracker</title>
-  <!-- App 图标 -->
-  <link rel="icon" type="image/png" href="/icon.png" />
-  <link rel="apple-touch-icon" href="/icon.png" />
-  
-  <!-- PWA 配置 -->
-  <link rel="manifest" href="/manifest.json" />
-  
-  <!-- iOS 专属配置 (全屏显示，顶部状态栏颜色) -->
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="HealthTracker" />
-</head>
+    
+    <!-- 1. 修改了这里：标题改为 HealthTracker -->
+    <title>HealthTracker</title>
+
+    <!-- 2. 修改了这里：删除了原来的 vite.svg，只保留你的新图标 -->
+    <!-- App 图标 (浏览器标签页 + 手机主屏幕) -->
+    <link rel="icon" type="image/png" href="/icon.png" />
+    <link rel="apple-touch-icon" href="/icon.png" />
+    
+    <!-- PWA 配置 -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- iOS 专属配置 (全屏显示，顶部状态栏颜色) -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="HealthTracker" />
+  </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
